@@ -70,24 +70,20 @@ def print_points(clusters):
     pl.show()
 
 
-seed = 50
-list1 = generate_points(seed, 1.0, 50.0, 100)
-
-print_points([list1])
-
-center_points = []
-noise_points = []
-
 def get_neighbors(point, points, efs):
     neighbors = []
     points.remove(point)
 
     for each in points:
         if calculate_euclidean(point, each) <= efs:
+            #print("Point 1:", point)
+            #print("Point 2:", each)
+            #print("Distance:",calculate_euclidean(point, each),"\n\n")
             neighbors.append(each)
-
+    #print("Point:", point)
+    #print("Neighbors:",neighbors)
+    #print("Number of Neighbors:",len(neighbors))
     return neighbors
-
 
 
 def order_points(points, efs, min_pts):
@@ -104,20 +100,31 @@ def merge_centers(center_pts, efs):
     clusters =[]
 
     for point in center_pts:
-        contain = False
+        found = False
+        found_index = []
         neighbors = get_neighbors(point, deepcopy(center_pts), efs)
         neighbors.append(point)
-
-        if len(clusters) != 0:
-            for index in range(len(clusters)):
-                if list(set(clusters[index]).intersection(set(neighbors))) != []:
-                    clusters[index] = list(set(clusters[index]).union(set(neighbors)))
-                    contain = True
-                    break
-            if contain == False:
-                clusters.append(neighbors)
-        else:
+        for index in range(len(clusters)):
+            if list(set(clusters[index]).intersection(set(neighbors))) != []:
+                clusters[index] = list(set(clusters[index]).union(set(neighbors)))
+                found = True
+                found_index.append(index)
+        if found == False:
             clusters.append(neighbors)
+        if len(found_index) > 1:
+            print(found_index)
+            for index in range(1,len(found_index)):
+                clusters[found_index[0]] = list(set(clusters[found_index[0]]).union(set(clusters[found_index[index]])))
+            found_index.pop(0)
+            print(found_index)
+            print(len(clusters))
+            new_clusters = []
+            for index in range(len(clusters)):
+                if found_index.__contains__(index):
+                    continue
+                else:
+                    new_clusters.append(clusters[index])
+            clusters = new_clusters
 
     return clusters
 
@@ -137,25 +144,40 @@ def merge_borders(clusters, remaining_pts, starting_list, efs):
 
     return clusters
 
-    
+  
 
+efs = 5
+min_pts = 4
+seed = 50
+list1 = generate_points(seed, 1.0, 100.0, 300)
 
+print_points([list1])
 
-order_points(list1, 10, 4)
+center_points = []
+noise_points = []
+order_points(list1, efs, min_pts)
 
 
 #print(noise_points)
 print("Total Center Points:",len(center_points))
-clusters = merge_centers(center_points, 10)
 print("Total Other Points:",len(noise_points))
+clusters = merge_centers(center_points, efs)
 
+print("Total Center Points:",len(center_points))
+print("Total Other Points:",len(noise_points))
+print("Length of Clusters:",len(clusters))
+
+# print("\n\nCluster List")
+# for each in clusters:
+#     print(each)
+# print("Number of Clusters:", len(clusters))
+print_points(clusters)
+# clusters = merge_borders(clusters, noise_points, list1, 5)
 total = 0
 for each in clusters:
-    total+= len(each)
-print("Total in Cluster(Centers Only):", total)
+    total+=len(each)
 
-# clusters = merge_borders(clusters, noise_points, list1, 5)
-# total = 0
+print("Total:",total)
 # total_cluster_pts = []
 # for each in clusters:
 #     total += len(each)
