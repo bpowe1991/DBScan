@@ -1,20 +1,17 @@
 """"
-Programmer: Briton A. Powe              Program Homework Assignment #2
-Date: 4/18/18                           Class: Data Mining
-Filename: bisectingKMeansEuclidean.py   Version: 1.7.3
+Programmer: Briton A. Powe              Program Homework Assignment #3
+Date: 4/29/18                           Class: Data Mining
+Filename: mainDBS.py                    Version: 1.1.3
 ------------------------------------------------------------------------
 Program Description:
-Generates k number of clusters in a Euclidean space and outputs cluster analysis.
+Generates cluster using the DBScan algorithm. Generates points using a set seed.
 **This Program uses Python 3.6.4***
 
 """
-
-
 import random
 import math
 import matplotlib.pyplot as pl
 from copy import deepcopy
-from itertools import chain
 
 #Function to create 20 points with a defined seed
 def generate_points(seed, lower, upper, amount):
@@ -36,6 +33,62 @@ def generate_points(seed, lower, upper, amount):
 def calculate_euclidean(point1, point2):
     distance = round(math.sqrt(((point1[0]-point2[0])**2)+((point1[1]-point2[1])**2)), 2)
     return distance
+
+#Function to calculate all Euclidean distances in a cluster
+def calculate_distances_euclidean(main_point, points):
+    euclidean_distances = []
+ 
+    #Finding each distance
+    for point in points:
+        euclidean_distances.append(calculate_euclidean(main_point, point))
+
+    return euclidean_distances
+
+#Function for finding eps and min_pts
+def calculate_k_nearest(list1): 
+    #Lists for k nearest neighbor from 3-7
+    dist_3_neighbor = []
+    dist_4_neighbor = []
+    dist_5_neighbor = []
+    dist_6_neighbor = []
+    dist_7_neighbor = []
+
+    #Loop for calculating k nearest distances for each k
+    for point in list1:
+        point_list = deepcopy(list1)
+        point_list.remove(point)
+        distances = calculate_distances_euclidean(point, point_list)
+        distances.sort()
+        dist_3_neighbor.append(distances[2])
+        dist_4_neighbor.append(distances[3])
+        dist_5_neighbor.append(distances[4])
+        dist_6_neighbor.append(distances[5])
+        dist_7_neighbor.append(distances[6])
+
+    #Sorting the k nearest distances
+    dist_3_neighbor.sort()
+    dist_4_neighbor.sort()
+    dist_5_neighbor.sort()
+    dist_6_neighbor.sort()
+    dist_7_neighbor.sort()
+
+    #Grouping all distances together
+    dist_k_list = [dist_3_neighbor,
+                dist_4_neighbor,
+                dist_5_neighbor,
+                dist_6_neighbor,
+                dist_7_neighbor]
+
+    #Adding a label for each distance in each k list
+    count = 0
+    for k in range(len(dist_k_list)):
+        for x in range(len(dist_k_list[0])):
+            dist_k_list[k][x] = (count, dist_k_list[k][x])
+            count += 1
+        count = 0
+
+    #Outputting graph for all k lists
+    print_points(dist_k_list)
 
 #Function to split x and y coordinates for screen output
 def split_coordinates(points):
@@ -139,13 +192,16 @@ def merge_centers(center_pts, efs):
 #Function to combine potential border points to the clusters
 def merge_borders(clusters, remaining_pts, efs):
     global center_points
+    
+    #List to keep track of which points were border points
     used_points = []
 
     for point in remaining_pts:
-
+        #Getting neighboring points that are center points
         for index in range(len(clusters)):
             neighbors = get_neighbors(point,deepcopy(center_points), efs)
             
+            #Adding border point to cluster with neighboring center point
             if list(set(clusters[index]).intersection(set(neighbors))) != []:
                 clusters[index].append(point)
                 used_points.append(point)
@@ -153,49 +209,68 @@ def merge_borders(clusters, remaining_pts, efs):
 
     return clusters, used_points
 
-  
+#Main DBScan function
+def DBScan(data_pts, efs, min_pts):
+    #List for points
+    global center_points, other_points
 
-efs = 2
-min_pts = 0
+    #Ordering points
+    order_points(data_pts, efs, min_pts)
+
+    #Combining Neighboring clusters and outputing them
+    clusters = merge_centers(center_points, efs)
+    print_points(clusters)
+
+    #Combining border points from other_points list
+    clusters, points_to_remove = merge_borders(clusters, other_points, efs)
+    
+    #Removing border points from noise points
+    other_points = list(set(other_points).difference(set(points_to_remove)))
+
+    #Adding noise points as seperate cluster
+    clusters.append(other_points)
+
+    #Output final clustering result
+    print_points(clusters)
+
+#Start of 100 pts with 1.0 <= x,y <= 100.0
 seed = 50
-list1 = generate_points(seed, 1.0, 100.0, 100)
-
-print_points([list1])
-
 center_points = []
 other_points = []
-order_points(list1, efs, min_pts)
+list1 = generate_points(seed, 1.0, 100.0, 100)
 
+efs = 9
+min_pts = 4
 
-print("Total Center Points:",len(center_points))
-print("Total Other Points:",len(other_points))
-clusters = merge_centers(center_points, efs)
+print_points([list1])
+DBScan(list1, efs, min_pts)
 
-print("Total Center Points:",len(center_points))
-print("Total Other Points:",len(other_points))
-print("Length of Clusters:",len(clusters))
+#Start of 10 pts with 1.0 <= x,y <= 30.0 and 10 pts with 70.0 <= x,y <= 99.0
+center_points = []
+other_points = []
+list1 = generate_points(seed, 1.0, 30.0, 10)
+list2 = generate_points(seed, 70.0, 99.0, 10)
+list1 = list(set(list1).union(set(list2)))
 
-print_points(clusters)
-total = 0
-for each in clusters:
-    total+=len(each)
+efs = 11
+min_pts = 3
 
-print("Total:",total)
+print_points([list1])
+DBScan(list1, efs, min_pts)
 
-clusters, points_to_remove = merge_borders(clusters, other_points, efs)
+#Start of 10 pts with 1.0 <= x,y <= 30.0 and 50 pts with 70.0 <= x,y <= 99.0
+center_points = []
+other_points = []
+list1 = generate_points(seed, 1.0, 30.0, 10)
+list2 = generate_points(seed, 70.0, 99.0, 50)
+list1 = list(set(list1).union(set(list2)))
 
-total = 0
-for each in clusters:
-    total+=len(each)
+efs = 11
+min_pts = 7
 
-print("Total:", total)
+print_points([list1])
+DBScan(list1, efs, min_pts)
 
-other_points = list(set(other_points).difference(set(points_to_remove)))
-
-print(len(other_points))
-clusters.append(other_points)
-
-print_points(clusters)
 
 
 
