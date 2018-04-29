@@ -69,56 +69,64 @@ def print_points(clusters):
     #Outputting graph
     pl.show()
 
-
+#Function to find neighbor based on efs
 def get_neighbors(point, points, efs):
     neighbors = []
-    points.remove(point)
+    
+    if points.__contains__(point):
+        points.remove(point)
 
+    #Add point to neighbors list if in range of efs
     for each in points:
         if calculate_euclidean(point, each) <= efs:
-            #print("Point 1:", point)
-            #print("Point 2:", each)
-            #print("Distance:",calculate_euclidean(point, each),"\n\n")
             neighbors.append(each)
-    #print("Point:", point)
-    #print("Neighbors:",neighbors)
-    #print("Number of Neighbors:",len(neighbors))
+
     return neighbors
 
-
+#Function to split points into center points and other points
 def order_points(points, efs, min_pts):
-    global center_points, noise_points, noise_points
+    global center_points, other_points
+    
+    #Split points if number of neighbor meets threshold
     for point in points:
         if len(get_neighbors(point, deepcopy(points), efs)) >= min_pts:
             center_points.append(point)
         else:
-            noise_points.append(point)
+            other_points.append(point)
 
-    print("Total Points:",len(center_points)+len(noise_points))
-
+#Function to combine center points if they are neighbors
 def merge_centers(center_pts, efs):
+    #List to hold clusters
     clusters =[]
 
+    #Main loop for finding neighboring clusters
     for point in center_pts:
         found = False
         found_index = []
         neighbors = get_neighbors(point, deepcopy(center_pts), efs)
         neighbors.append(point)
+        
+        #Loop for combining intersecting center points
         for index in range(len(clusters)):
+            
+            #If center points have neighboring points, combine into a set
             if list(set(clusters[index]).intersection(set(neighbors))) != []:
                 clusters[index] = list(set(clusters[index]).union(set(neighbors)))
                 found = True
                 found_index.append(index)
+        
+        #If no neighboring points intersect, append as new cluster
         if found == False:
             clusters.append(neighbors)
+        
+        #If more than one previous cluster overlaps, combine them together
         if len(found_index) > 1:
-            print(found_index)
             for index in range(1,len(found_index)):
                 clusters[found_index[0]] = list(set(clusters[found_index[0]]).union(set(clusters[found_index[index]])))
             found_index.pop(0)
-            print(found_index)
-            print(len(clusters))
             new_clusters = []
+            
+            #Create new list of clusters and replace old list
             for index in range(len(clusters)):
                 if found_index.__contains__(index):
                     continue
@@ -128,73 +136,66 @@ def merge_centers(center_pts, efs):
 
     return clusters
 
-def merge_borders(clusters, remaining_pts, starting_list, efs):
-    
+#Function to combine potential border points to the clusters
+def merge_borders(clusters, remaining_pts, efs):
+    global center_points
+    used_points = []
+
     for point in remaining_pts:
-        #print("Point:",point)
+
         for index in range(len(clusters)):
-            neighbors = get_neighbors(point,deepcopy(starting_list), efs)
-            #print("Neighbors:",neighbors)
+            neighbors = get_neighbors(point,deepcopy(center_points), efs)
+            
             if list(set(clusters[index]).intersection(set(neighbors))) != []:
-                #print(True)
-                #print("Cluster Before:",clusters[index])
                 clusters[index].append(point)
-                #print("Cluster After:",clusters[index])
+                used_points.append(point)
                 break
 
-    return clusters
+    return clusters, used_points
 
   
 
-efs = 5
-min_pts = 4
+efs = 2
+min_pts = 0
 seed = 50
-list1 = generate_points(seed, 1.0, 100.0, 300)
+list1 = generate_points(seed, 1.0, 100.0, 100)
 
 print_points([list1])
 
 center_points = []
-noise_points = []
+other_points = []
 order_points(list1, efs, min_pts)
 
 
-#print(noise_points)
 print("Total Center Points:",len(center_points))
-print("Total Other Points:",len(noise_points))
+print("Total Other Points:",len(other_points))
 clusters = merge_centers(center_points, efs)
 
 print("Total Center Points:",len(center_points))
-print("Total Other Points:",len(noise_points))
+print("Total Other Points:",len(other_points))
 print("Length of Clusters:",len(clusters))
 
-# print("\n\nCluster List")
-# for each in clusters:
-#     print(each)
-# print("Number of Clusters:", len(clusters))
 print_points(clusters)
-# clusters = merge_borders(clusters, noise_points, list1, 5)
 total = 0
 for each in clusters:
     total+=len(each)
 
 print("Total:",total)
-# total_cluster_pts = []
-# for each in clusters:
-#     total += len(each)
-#     for point in each:
-#         total_cluster_pts.append(point)
-# print(total)
-# print(len(total_cluster_pts))
-# noise_points = list(set(noise_points).difference(total_cluster_pts))
-# print("cluster and noise total:")
-# print(len(total_cluster_pts)+len(noise_points))
 
-# clusters.append(noise_points)
-# print_points(clusters)
+clusters, points_to_remove = merge_borders(clusters, other_points, efs)
 
+total = 0
+for each in clusters:
+    total+=len(each)
 
+print("Total:", total)
 
+other_points = list(set(other_points).difference(set(points_to_remove)))
 
+print(len(other_points))
+clusters.append(other_points)
+
+print_points(clusters)
 
 
 
