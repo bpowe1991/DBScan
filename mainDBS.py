@@ -239,7 +239,7 @@ center_points = []
 other_points = []
 list1 = generate_points(seed, 1.0, 100.0, 100)
 
-efs = 9
+efs = 16
 min_pts = 4
 
 print_points([list1])
